@@ -10,11 +10,20 @@ canvas.style.backgroundColor = "black"
 // (minst 200 px till vänstermarginal, max 20 % av bredd till högermarginal)
 let xPos = Math.floor((0.8 * canvas.width - 200) + 200)
 let yPos = Math.floor((0.8 * canvas.height - 200) + 200)
+let player1 = 0
+let player2 = 0
+
+let player = {
+    y: 0,
+    ySpeed: 5,
+    length: 40,
+    width: 20,
+}
 
 // Hastighet för kvadrat
 let speed = 5
-let xSpeed = 0
-let ySpeed = 0
+let ySpeedP1 = 0
+let ySpeedP2 = 0
 
 // Sidlängd för kvadrat
 const size = 100
@@ -28,23 +37,23 @@ document.onkeydown = function (e) {
   switch (key) {
     case "w":
       // w-tangenten ska göra att kvadraten rör sig uppåt (negativ y-led).
-      console.log("Going up")
-      ySpeed = -speed
+      console.log("player 1 Going up")
+      ySpeedP1 = -speed
       break
-    case "a":
+    case "ArrowUp":
       // a-tangenten ska göra att kvadraten rör sig åt vänster (negativ x-led).
-      console.log("Going left")
-      xSpeed = -speed
+      console.log("player 2 going up")
+      ySpeedP2 = -speed
       break
     case "s":
       // s-tangenten ska göra att kvadraten rör sig nedåt (positiv y-led).
-      console.log("Going down")
-      ySpeed = speed
+      console.log("player 1 Going down")
+      ySpeedP1 = speed
       break
-    case "d":
+    case "ArrowDown":
       // d-tangenten ska göra att kvadraten rör sig åt höger (positiv x-led).
-      console.log("Going right")
-      xSpeed = speed
+      console.log("player 2 going down")
+      ySpeedP2 = speed
       break
     case " ": // Mellanslag
       console.log(`Mellanslag`)
@@ -60,19 +69,19 @@ document.onkeyup = function (e) {
   switch (key) {
     case "w":
       console.log("Stop up")
-      ySpeed = 0
+      ySpeedP1 = 0
       break
-    case "a":
+    case "ArrowUp":
       console.log("Stop left")
-      xSpeed = 0
+      ySpeedP2 = 0
       break
     case "s":
       console.log("Stop down")
-      ySpeed = 0
+      ySpeedP1 = 0
       break
-    case "d":
+    case "ArrowDown":
       console.log("Stop right")
-      xSpeed = 0
+      ySpeedP2 = 0
       break
   }
 }
