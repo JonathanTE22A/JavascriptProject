@@ -1,107 +1,312 @@
-let canvas = document.querySelector("canvas")
-canvas.width = window.innerWidth
-canvas.height = window.innerHeight
-canvas.style.width = "100%"
-canvas.style.height = "100%"
-canvas.style.backgroundColor = "black"
+let canvas = document.querySelector("canvas");
+canvas.width = document.body.clientWidth * 0.99;
+canvas.height = document.body.clientHeight * 0.99;
+canvas.style.backgroundColor = "black";
 
-// Startläge kvadrat
-// Slumpas fram med lite marginal från kanterna
-// (minst 200 px till vänstermarginal, max 20 % av bredd till högermarginal)
-let xPos = Math.floor((0.8 * canvas.width - 200) + 200)
-let yPos = Math.floor((0.8 * canvas.height - 200) + 200)
-let player1 = 0
-let player2 = 0
+let Pspelare1 = {
+  y: canvas.height / 2 - 100,
+  ySpeed: 0,
+  längd: 200,
+  bredd: 10,
+};
 
-let player = {
-    y: 0,
-    ySpeed: 5,
-    length: 40,
-    width: 20,
+let Pspelare2 = {
+  y: canvas.height / 2 - 100,
+  ySpeed: 0,
+  längd: 200,
+  bredd: 10,
+};
+
+let paddelBredd = 10;
+let paddelHöjd = 200;
+let hastighet = 8; 
+
+let ball = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  dx: Math.random() < 0.5 ? -3 : 3,  
+  dy: (Math.random() - 0.5) * 3, 
+  radie: 20, 
+  acceleration: 0.005, 
+};
+
+let scoreP1 = parseInt(localStorage.getItem('scoreP1')) || 0;
+let scoreP2 = parseInt(localStorage.getItem('scoreP2')) || 0;
+
+// Variabler för power-ups
+let powerUps = [];
+
+// Färger för power-ups
+const powerUpColor = "#FFA500";
+
+// Typer av power-ups
+const powerUpTypes = ["dubbla_poäng", "dubbel_bollhastighet", "halv_bollhastighet", "dubbel_bollstorlek", "halv_bollstorlek"];
+
+// Funktion för att generera slumpmässig power-up
+function genereraPowerUp() {
+  const typ = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+  return {
+    x: Math.random() * (canvas.width - 40) + 20, // Slumpmässig x-position inom canvas
+    y: Math.random() * (canvas.height - 40) + 20, // Slumpmässig y-position inom canvas
+    typ: typ
+  };
 }
 
-// Hastighet för kvadrat
-let speed = 5
-let ySpeedP1 = 0
-let ySpeedP2 = 0
+// Funktion för att rita power-ups
+function ritaPowerUps() {
+  powerUps.forEach(powerUp => {
+    ctx.beginPath();
+    ctx.arc(powerUp.x, powerUp.y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = powerUpColor;
+    ctx.fill();
+    ctx.closePath();
+  });
+}
 
-// Sidlängd för kvadrat
-const size = 100
+// Funktion för att kontrollera kollision med power-ups
+function kontrolleraPowerUpKollision() {
+  powerUps.forEach((powerUp, index) => {
+    const avstånd = Math.sqrt((ball.x - powerUp.x) ** 2 + (ball.y - powerUp.y) ** 2);
+    if (avstånd < ball.radie + 10) {
+      appliceraPowerUpEffekt(powerUp.typ);
+      powerUps.splice(index, 1); // Ta bort power-up från arrayen
+    }
+  });
+}
 
-// Reagerar på tangenttryckningar
-// Varje tangent har sin keycode, se https://keycosde.info
-// När en tangent trycks ned så sätts hastigheten i x- eller y-led.
+// Funktion för att applicera power-up effekter
+function appliceraPowerUpEffekt(typ) {
+  switch(typ) {
+    case "dubbla_poäng":
+      scoreP1 *= 2;
+      scoreP2 *= 2;
+      ball.color = "#FF0000"; // Röd färg för power-up
+      break;
+    case "dubbel_bollhastighet":
+      ball.acceleration *= 2;
+      ball.color = "#00FF00"; // Grön färg för power-up
+      break;
+    case "halv_bollhastighet":
+      ball.acceleration /= 2;
+      ball.color = "#0000FF"; // Blå färg för power-up
+      break;
+    case "dubbel_bollstorlek":
+      ball.radie *= 2;
+      ball.color = "#FFFF00"; // Gul färg för power-up
+      break;
+    case "halv_bollstorlek":
+      ball.radie /= 2;
+      ball.color = "#00FFFF"; // Cyan färg för power-up
+      break;
+  }
+}
+
+// Funktion för att ångra power-up effekter
+function ångraPowerUpEffekt() {
+  switch(activePowerUp) {
+    case "dubbla_poäng":
+      scoreP1 /= 2;
+      scoreP2 /= 2;
+      break;
+    case "dubbel_bollhastighet":
+      ball.acceleration /= 2;
+      break;
+    case "halv_bollhastighet":
+      ball.acceleration *= 2;
+      break;
+    case "dubbel_bollstorlek":
+      ball.radie /= 2;
+      break;
+    case "halv_bollstorlek":
+      ball.radie *= 2;
+      break;
+  }
+  // Återställ färgen på spelbollen till vit
+  ball.color = "#FFFFFF";
+  // Återställ aktiv power-up
+  activePowerUp = null;
+}
+
+// Funktion för att lägga till power-up med intervall mellan 5 och 20 studsar
+function läggTillPowerUp() {
+  const minStudsar = 5;
+  const maxStudsar = 20;
+  let antalStudsar = 0;
+
+  function genereraEttPowerUp() {
+    powerUps.push(genereraPowerUp());
+    antalStudsar = 0; // Återställ antalet studsar för nästa power-up
+  }
+
+  setInterval(() => {
+    antalStudsar++;
+    if (antalStudsar >= minStudsar && antalStudsar <= maxStudsar) {
+      genereraEttPowerUp();
+    }
+  }, 1000); // Körs varje sekund
+}
+
+// Funktion för att rita bollen
+function ritaBoll() {
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.radie, 0, Math.PI * 2);
+  ctx.fillStyle = ball.color || "white"; // Använd aktiv power-up-färg eller vit
+  ctx.fill();
+  ctx.closePath();
+}
+
+let ctx = canvas.getContext("2d");
+
+function ritaAvrundadeRektangel(ctx, x, y, bredd, höjd, radieProcent) {
+  const radie = Math.min(bredd, höjd) * radieProcent;
+  ctx.beginPath();
+  ctx.moveTo(x + radie, y);
+  ctx.arcTo(x + bredd, y, x + bredd, y + höjd, radie);
+  ctx.arcTo(x + bredd, y + höjd, x, y + höjd, radie);
+  ctx.arcTo(x, y + höjd, x, y, radie);
+  ctx.arcTo(x, y, x + bredd, y, radie);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function uppdateraBoll() {
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  if (ball.dx > 0) {
+    ball.dx += ball.acceleration;
+  } else {
+    ball.dx -= ball.acceleration;
+  }
+
+  if (ball.dy > 0) {
+    ball.dy += ball.acceleration;
+  } else {
+    ball.dy -= ball.acceleration;
+  }
+
+  if (ball.x + ball.dx > canvas.width - ball.radie || ball.x + ball.dx < ball.radie) {
+    if (ball.x + ball.dx < ball.radie) {
+      scoreP2++;
+      localStorage.setItem('scoreP2', scoreP2);
+    } else {
+      scoreP1++;
+      localStorage.setItem('scoreP1', scoreP1);
+    }
+    resetBall();
+  }
+
+  if (
+    ball.x - ball.radie <= 20 + paddelBredd &&
+    ball.y >= Pspelare1.y &&
+    ball.y <= Pspelare1.y + paddelHöjd
+  ) {
+    ball.dx = -ball.dx;
+  }
+
+  if (
+    ball.x + ball.radie >= canvas.width - 20 - paddelBredd &&
+    ball.y >= Pspelare2.y &&
+    ball.y <= Pspelare2.y + paddelHöjd
+  ) {
+    ball.dx = -ball.dx;
+  }
+
+  if (ball.y + ball.dy > canvas.height - ball.radie || ball.y + ball.dy < ball.radie) {
+    ball.dy = -ball.dy;
+  }
+
+  kontrolleraPowerUpKollision(); // Kolla kollision med power-ups
+}
+
+function resetBall() {
+  ball.x = canvas.width / 2;
+  ball.y = canvas.height / 2;
+  ball.dx = Math.random() < 0.5 ? -3 : 3;
+  ball.dy = (Math.random() - 0.5) * 3;
+}
+
+function animering() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "white";
+  ritaAvrundadeRektangel(ctx, 10, Pspelare1.y, paddelBredd, paddelHöjd, 0.02);
+  ritaAvrundadeRektangel(ctx, canvas.width - 20 - paddelBredd, Pspelare2.y, paddelBredd, paddelHöjd, 0.02);
+  ritaBoll();
+  ritaPowerUps(); // Rita power-ups
+
+  ctx.font = "30px Arial";
+  ctx.fillStyle = "white";
+  ctx.fillText(scoreP1.toString(), canvas.width / 4, 50);
+  ctx.fillText(scoreP2.toString(), (canvas.width * 3) / 4, 50);
+
+  uppdateraBoll();
+
+  Pspelare1.y += Pspelare1.ySpeed;
+  Pspelare2.y += Pspelare2.ySpeed;
+
+  if (Pspelare1.y < 0) {
+    Pspelare1.y = 0;
+  } else if (Pspelare1.y + paddelHöjd > canvas.height) {
+    Pspelare1.y = canvas.height - paddelHöjd;
+  }
+
+  if (Pspelare2.y < 0) {
+    Pspelare2.y = 0;
+  } else if (Pspelare2.y + paddelHöjd > canvas.height) {
+    Pspelare2.y = canvas.height - paddelHöjd;
+  }
+
+  window.requestAnimationFrame(animering);
+}
+
 document.onkeydown = function (e) {
-  console.log(e) //Inparametern e innehåller ett event-objekt med information om eventet.
-  const key = e.key
+  const key = e.key;
   switch (key) {
     case "w":
-      // w-tangenten ska göra att kvadraten rör sig uppåt (negativ y-led).
-      console.log("player 1 Going up")
-      ySpeedP1 = -speed
-      break
-    case "ArrowUp":
-      // a-tangenten ska göra att kvadraten rör sig åt vänster (negativ x-led).
-      console.log("player 2 going up")
-      ySpeedP2 = -speed
-      break
+      Pspelare1.ySpeed = -hastighet;
+      break;
     case "s":
-      // s-tangenten ska göra att kvadraten rör sig nedåt (positiv y-led).
-      console.log("player 1 Going down")
-      ySpeedP1 = speed
-      break
+      Pspelare1.ySpeed = hastighet;
+      break;
+    case "ArrowUp":
+      Pspelare2.ySpeed = -hastighet;
+      break;
     case "ArrowDown":
-      // d-tangenten ska göra att kvadraten rör sig åt höger (positiv x-led).
-      console.log("player 2 going down")
-      ySpeedP2 = speed
-      break
-    case " ": // Mellanslag
-      console.log(`Mellanslag`)
-      break
-    default: // alla övriga tangenter
-      console.log("Tangenten används inte")
+      Pspelare2.ySpeed = hastighet;
+      break;
+    case "r": // Lägg till detta fall för tangenten "r"
+      återställSpel();
+      break;
   }
-}
+};
 
-// När en tangent släpps upp så vill vi stoppa rörelsen i den riktningen.
 document.onkeyup = function (e) {
-  const key = e.key
+  const key = e.key;
   switch (key) {
     case "w":
-      console.log("Stop up")
-      ySpeedP1 = 0
-      break
-    case "ArrowUp":
-      console.log("Stop left")
-      ySpeedP2 = 0
-      break
     case "s":
-      console.log("Stop down")
-      ySpeedP1 = 0
-      break
+      Pspelare1.ySpeed = 0;
+      break;
+    case "ArrowUp":
     case "ArrowDown":
-      console.log("Stop right")
-      ySpeedP2 = 0
-      break
+      Pspelare2.ySpeed = 0;
+      break;
   }
+};
+
+// Funktion för att återställa spelet
+function återställSpel() {
+  // Återställ bollpositionen
+  resetBall();
+  
+  // Återställ poäng
+  scoreP1 = 0;
+  scoreP2 = 0;
+  localStorage.setItem('scoreP1', scoreP1);
+  localStorage.setItem('scoreP2', scoreP2);
 }
 
-let ctx = canvas.getContext("2d")
+läggTillPowerUp(); // Lägg till power-ups med intervall mellan 5 och 20 studsar
 
-// Animeringsloopen
-function animate() {
-  // Rensar gammalt visuellt innehåll
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-  // Sätt nya läget.
-  xPos += xSpeed
-  yPos += ySpeed
-
-  // Den röda kvadraten ritas i sitt nya läge
-  ctx.fillStyle = "red"
-  ctx.fillRect(xPos, yPos, size, size)
-
-  window.requestAnimationFrame(animate)
-}
-
-window.requestAnimationFrame(animate)
+window.requestAnimationFrame(animering);
