@@ -20,6 +20,7 @@ let Pspelare2 = {
 let paddelBredd = 10;
 let paddelHöjd = 200;
 let hastighet = 8; 
+let ball_value = 1;
 
 let ball = {
   x: canvas.width / 2,
@@ -78,8 +79,7 @@ function kontrolleraPowerUpKollision() {
 function appliceraPowerUpEffekt(typ) {
   switch(typ) {
     case "dubbla_poäng":
-      scoreP1 *= 2;
-      scoreP2 *= 2;
+      ball_value *= 2;
       ball.color = "#FF0000"; // Röd färg för power-up
       break;
     case "dubbel_bollhastighet":
@@ -105,8 +105,7 @@ function appliceraPowerUpEffekt(typ) {
 function ångraPowerUpEffekt() {
   switch(activePowerUp) {
     case "dubbla_poäng":
-      scoreP1 /= 2;
-      scoreP2 /= 2;
+      ball_value /= 2;
       break;
     case "dubbel_bollhastighet":
       ball.acceleration /= 2;
@@ -127,23 +126,15 @@ function ångraPowerUpEffekt() {
   activePowerUp = null;
 }
 
-// Funktion för att lägga till power-up med intervall mellan 5 och 20 studsar
+// Funktion för att lägga till power-up med intervall på tio sekunder
 function läggTillPowerUp() {
-  const minStudsar = 5;
-  const maxStudsar = 20;
-  let antalStudsar = 0;
-
   function genereraEttPowerUp() {
     powerUps.push(genereraPowerUp());
-    antalStudsar = 0; // Återställ antalet studsar för nästa power-up
   }
 
   setInterval(() => {
-    antalStudsar++;
-    if (antalStudsar >= minStudsar && antalStudsar <= maxStudsar) {
-      genereraEttPowerUp();
-    }
-  }, 1000); // Körs varje sekund
+    genereraEttPowerUp();
+  }, 10000); // Körs var tionde sekund
 }
 
 // Funktion för att rita bollen
@@ -152,7 +143,7 @@ function ritaBoll() {
   ctx.arc(ball.x, ball.y, ball.radie, 0, Math.PI * 2);
   ctx.fillStyle = ball.color || "white"; // Använd aktiv power-up-färg eller vit
   ctx.fill();
-  ctx.closePath();
+  ctx.closePath();  
 }
 
 let ctx = canvas.getContext("2d");
@@ -187,10 +178,12 @@ function uppdateraBoll() {
 
   if (ball.x + ball.dx > canvas.width - ball.radie || ball.x + ball.dx < ball.radie) {
     if (ball.x + ball.dx < ball.radie) {
-      scoreP2++;
+      scoreP2 += ball_value;
+      powerUps = [];
       localStorage.setItem('scoreP2', scoreP2);
     } else {
-      scoreP1++;
+      scoreP1 += ball_value;
+      powerUps = [];
       localStorage.setItem('scoreP1', scoreP1);
     }
     resetBall();
@@ -224,6 +217,9 @@ function resetBall() {
   ball.y = canvas.height / 2;
   ball.dx = Math.random() < 0.5 ? -3 : 3;
   ball.dy = (Math.random() - 0.5) * 3;
+  ball.color = 'white';
+  ball.radie = 20;
+  ball_value = 1;
 }
 
 function animering() {
@@ -295,10 +291,11 @@ document.onkeyup = function (e) {
   }
 };
 
-// Funktion för att återställa spelet
+// Funktion för att återställa spelet och tömma skärmen på power-ups
 function återställSpel() {
   // Återställ bollpositionen
   resetBall();
+  powerUps = []; // Töm arrayen powerUps för att ta bort alla power-ups från skärmen
   
   // Återställ poäng
   scoreP1 = 0;
